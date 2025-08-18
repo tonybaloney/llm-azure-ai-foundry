@@ -1,5 +1,8 @@
 # Azure AI Foundry Plugin for LLM
 
+> **Important**
+> This package is in early development and highly experimental
+
 This is a plugin for [llm](https://llm.datasette.io) that uses [Azure AI Foundry Models](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/create-projects?tabs=ai-foundry&pivots=fdp-project).
 
 Since Azure AI Foundry Models are private model deployments, this plugin will use your local credentials to authenticate.
