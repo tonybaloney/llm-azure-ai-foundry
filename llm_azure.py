@@ -4,6 +4,7 @@ from azure.identity import DefaultAzureCredential
 import logging
 
 import llm
+from llm.errors import NeedsKeyException
 from llm.default_plugins.openai_models import AsyncChat, Chat
 
 logging.basicConfig(level=logging.WARNING)
@@ -13,6 +14,8 @@ logging.basicConfig(level=logging.WARNING)
 def register_models(register):
 
     endpoint = llm.get_key("azure.endpoint")
+    if not endpoint:
+        raise NeedsKeyException("Configure the azure.endpoint to the URL of your project endpoint, e.g. https://<xxx>.services.ai.azure.com/api/projects/<project-name>")
 
     with DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential:
         with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
