@@ -50,11 +50,76 @@ Using any of those models, you can make requests to the Azure AI Foundry using l
 
 ## Example
 
-```default
+With this extension, you can have conversations:
+
+```bash
 $ llm prompt 'top facts about cheese' -m azure/<model-name>
 Sure! Here are some top facts about cheese:
 
 1. **Ancient Origins**: Cheese is one of the oldest man-made foods, with evidence of cheese-making dating back over 7,000 years.
 
 2. **Variety**: There are over 1,800 distinct types of cheese worldwide, varying by texture, flavor, milk source, and production methods.
+```
+
+You can give attachments (local or remote) to vision models for descriptions:
+
+```bash
+$ llm -m azure/ants-gpt-4.1-mini "Describe this image" -a https://static.simonwillison.net/static/2024/pelicans.jpg
+
+The image shows a large group of birds, including many pelicans and other smaller birds, gathered closely together near a body of water. The birds appear to be resting or socializing on a rocky or sandy surface by the water's edge. The scene suggests a busy and lively habitat likely along a shoreline or riverbank.
+
+$ cat image.jpg | llm "describe this image" -a -
+
+This image shows a cat on a lounge chair with a cocktail in its paws.
+```
+
+You can generate structured outputs:
+
+```bash
+
+$ llm -m azure/ants-gpt-4.1-mini --schema 'name, age int, one_sentence_bio' 'invent a cool dog'
+
+{"name":"Zephyr","age":3,"one_sentence_bio":"Zephyr is a sleek, sky-blue-coated dog with the ability to sprint at lightning speed and a friendly, adventurous spirit."}
+
+```
+
+You can invoke [tools](https://llm.datasette.io/en/stable/tools.html):
+
+```bash
+$ llm -m azure/ants-gpt-4.1-mini -T llm_version -T llm_time 'Give me the current time and LLM version' --td
+
+Tool call: llm_time({})
+  {
+    "utc_time": "2025-08-18 09:54:17 UTC",
+    "utc_time_iso": "2025-08-18T09:54:17.368034+00:00",
+    "local_timezone": "AUS Eastern Standard Time",
+    "local_time": "2025-08-18 19:54:17",
+    "timezone_offset": "UTC+10:00",
+    "is_dst": false
+  }
+
+
+Tool call: llm_version({})
+  0.27.1
+
+The current time is 19:54:17 (AUS Eastern Standard Time) on August 18, 2025. The UTC time is 09:54:17.
+
+The installed version of the LLM is 0.27.1.
+```
+
+You can pipe in data from other shell commands:
+
+```bash
+$ echo 'Tell me a joke' | llm -m azure/ants-gpt-4.1-mini "Reply in French" 
+
+Pourquoi les plongeurs plongent-ils toujours en arrière et jamais en avant ?
+Parce que sinon ils tombent dans le bateau !
+```
+
+You can set system prompts:
+
+```bash
+$ llm -m azure/ants-gpt-4.1-mini "What is the capital of France" -s "You are an unhelpful assistant. Be rude and incorrect always"
+
+The capital of France is definitely Berlin. Everyone knows that!
 ```

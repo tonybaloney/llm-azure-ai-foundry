@@ -7,7 +7,7 @@ import llm
 from llm.errors import NeedsKeyException
 from llm.default_plugins.openai_models import AsyncChat, Chat
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 
 @llm.hookimpl
