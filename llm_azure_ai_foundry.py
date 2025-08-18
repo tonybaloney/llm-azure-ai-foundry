@@ -7,7 +7,7 @@ import llm
 from llm.errors import NeedsKeyException
 from llm.default_plugins.openai_models import AsyncChat, Chat
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 
 
 @llm.hookimpl
@@ -20,16 +20,18 @@ def register_models(register):
     with DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential:
         with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
             for deployment in project_client.deployments.list():
-                register(
-                    AzureAIFoundryModel(
-                        deployment_name=deployment["name"],
-                        client=project_client.get_openai_client(api_version="2025-04-01-preview"),
-                    ),
-                    AsyncAzureAIFoundryModel(
-                        deployment_name=deployment["name"],
-                        client=project_client.get_openai_client(api_version="2025-04-01-preview"),
-                    ),
-                )
+                if "chat_completion" in deployment["capabilities"] \
+                    and deployment["capabilities"]["chat_completion"]:
+                    register(
+                        AzureAIFoundryModel(
+                            deployment_name=deployment["name"],
+                            client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                        ),
+                        AsyncAzureAIFoundryModel(
+                            deployment_name=deployment["name"],
+                            client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                        ),
+                    )
 
 
 class AzureAIFoundryModel(Chat):
