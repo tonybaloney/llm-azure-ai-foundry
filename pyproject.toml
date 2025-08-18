@@ -1,5 +1,5 @@
 [project]
-name = "llm-azure"
+name = "llm-azure-ai-foundry"
 version = "0.1.0"
 description = "LLM plugin to access model deployments on Azure AI Foundry"
 readme = "README.md"
@@ -16,13 +16,13 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tonybaloney/llm-azure"
-Changelog = "https://github.com/tonybaloney/llm-azure/releases"
-Issues = "https://github.com/tonybaloney/llm-azure/issues"
-CI = "https://github.com/tonybaloney/llm-azure/actions"
+Homepage = "https://github.com/tonybaloney/llm-azure-ai-foundry"
+Changelog = "https://github.com/tonybaloney/llm-azure-ai-foundry/releases"
+Issues = "https://github.com/tonybaloney/llm-azure-ai-foundry/issues"
+CI = "https://github.com/tonybaloney/llm-azure-ai-foundry/actions"
 
 [project.entry-points.llm]
-azure = "llm_azure"
+azure_ai_foundry = "llm_azure_ai_foundry"
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-recording", "pytest-asyncio", "ruff", "pyright"]

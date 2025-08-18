@@ -2,15 +2,17 @@
 
 This is a plugin for [llm](https://llm.datasette.io) that uses [Azure AI Foundry Models](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/create-projects?tabs=ai-foundry&pivots=fdp-project).
 
-Since Azure AI Foundry Models are private model deployments, this plugin will use your 
+Since Azure AI Foundry Models are private model deployments, this plugin will use your local credentials to authenticate.
+
+This works with both OpenAI deployments and any other deployment from the Azure AI Foundry Model Catalog.
 
 ## Installation
 
 ```default
-$ llm install llm-github-models
+$ llm install llm-azure-ai-foundry
 ```
 
-or `pip install llm-github-models`
+or `pip install llm-azure-ai-foundry`
 
 ## Usage
 
