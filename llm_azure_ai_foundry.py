@@ -13,9 +13,23 @@ from llm.errors import NeedsKeyException
 
 logging.basicConfig(level=logging.ERROR)
 
+# LLM will call the register_models hook twice for each invocation
+# Since we dynamically register models, cache the answer to avoid
+# this extra overhead.
+_cached_models = {}
+
 
 @llm.hookimpl
 def register_models(register):
+    def cached_register(alias, sync_model, async_model=None):
+        _cached_models[alias] = (sync_model, async_model)
+        register(sync_model, async_model)
+
+    if _cached_models:
+        for _, (sync_model, async_model) in _cached_models.items():
+            register(sync_model, async_model)
+        return
+
     try:
         assert_foundry_installed()
         FOUNDRY_LOCAL_INSTALLED = True
@@ -27,10 +41,11 @@ def register_models(register):
 
         def register_model(model: FoundryModelInfo, status: FoundryModelStatus):
             if model.task == "chat-completion":
-                register(
+                cached_register(
+                    model.alias,
                     FoundryLocalModel(
                         model_id=model.id, alias=model.alias, manager=mgr, status=status
-                    )
+                    ),
                 )
 
         catalog_models = mgr.list_catalog_models()
@@ -62,7 +77,8 @@ def register_models(register):
                     "chat_completion" in deployment["capabilities"]
                     and deployment["capabilities"]["chat_completion"]
                 ):
-                    register(
+                    cached_register(
+                        deployment["name"],
                         AzureAIFoundryModel(
                             deployment_name=deployment["name"],
                             client=project_client.get_openai_client(
