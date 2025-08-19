@@ -1,6 +1,6 @@
 # Azure AI Foundry and Foundry Local Plugin for LLM
 
-> **Important**
+> **Warning**
 > This package is in early development and highly experimental
 
 This is a plugin for [llm](https://llm.datasette.io) that uses [Azure AI Foundry Models](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/create-projects?tabs=ai-foundry&pivots=fdp-project) and [Foundry Local](https://github.com/microsoft/Foundry-Local).
