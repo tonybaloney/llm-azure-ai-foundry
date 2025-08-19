@@ -1,17 +1,15 @@
-from enum import StrEnum
-from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential
-
 import logging
+from enum import StrEnum
 
 import llm
 import openai
-from llm.errors import NeedsKeyException
-from llm.default_plugins.openai_models import AsyncChat, Chat
-
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
 from foundry_local import FoundryLocalManager
-from foundry_local.service import assert_foundry_installed
 from foundry_local.api import FoundryModelInfo
+from foundry_local.service import assert_foundry_installed
+from llm.default_plugins.openai_models import AsyncChat, Chat
+from llm.errors import NeedsKeyException
 
 logging.basicConfig(level=logging.ERROR)
 
