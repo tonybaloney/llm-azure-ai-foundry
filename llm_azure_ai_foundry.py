@@ -2,7 +2,6 @@ import logging
 from enum import StrEnum
 
 import llm
-import openai
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 from foundry_local import FoundryLocalManager
@@ -149,7 +148,7 @@ class FoundryModelStatus(StrEnum):
 
 
 class FoundryLocalModel(Chat):
-    needs_key = None
+    needs_key = "foundry"  # set in constructor
 
     def __init__(
         self, model_id: str, alias: str, manager: FoundryLocalManager, status: FoundryModelStatus
@@ -165,15 +164,10 @@ class FoundryLocalModel(Chat):
             reasoning=True,
             supports_schema=True,
             supports_tools=True,
-        )
-        self._client = openai.OpenAI(
-            base_url=manager.endpoint,
-            api_key=manager.api_key,  # API key is not required for local usage
+            api_base=manager.endpoint,
+            key=manager.api_key,
         )
         self.manager = manager
-
-    def get_client(self, key, *, async_=False):
-        return self._client
 
     def __str__(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         return f"Foundry Local: {self.model_id} ({self.status})"
@@ -188,3 +182,6 @@ class FoundryLocalModel(Chat):
             self.manager.load_model(self.foundry_id)
             self.status = FoundryModelStatus.Loaded
         return super().execute(*args, **kwargs)
+
+
+# TODO: Async local, although only the openai SDK is async, the Foundry Local API isn't
