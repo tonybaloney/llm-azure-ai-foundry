@@ -13,7 +13,7 @@ from foundry_local import FoundryLocalManager
 from foundry_local.service import assert_foundry_installed
 from foundry_local.api import FoundryModelInfo
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.ERROR)
 
 
 @llm.hookimpl
