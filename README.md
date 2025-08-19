@@ -1,9 +1,9 @@
-# Azure AI Foundry Plugin for LLM
+# Azure AI Foundry and Foundry Local Plugin for LLM
 
 > **Important**
 > This package is in early development and highly experimental
 
-This is a plugin for [llm](https://llm.datasette.io) that uses [Azure AI Foundry Models](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/create-projects?tabs=ai-foundry&pivots=fdp-project).
+This is a plugin for [llm](https://llm.datasette.io) that uses [Azure AI Foundry Models](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/create-projects?tabs=ai-foundry&pivots=fdp-project) and [Foundry Local](https://github.com/microsoft/Foundry-Local).
 
 Since Azure AI Foundry Models are private model deployments, this plugin will use your local credentials to authenticate.
 
@@ -17,7 +17,7 @@ $ llm install llm-azure-ai-foundry
 
 or `pip install llm-azure-ai-foundry`
 
-## Usage
+## Usage (Azure AI Foundry)
 
 First, you'll need your project endpoint from the Azure AI Foundry portal, this will look something like:
 
@@ -47,6 +47,47 @@ Default: gpt-4o-mini
 ```
 
 Using any of those models, you can make requests to the Azure AI Foundry using llm.
+
+## Usage (Foundry Local)
+
+To use Foundry Local models with llm, first you need to install [Foundry Local](https://github.com/microsoft/Foundry-Local).
+
+Then, llm will automatically discover models in the catalog. Any which are already downloaded (cached) or running (loaded) will be marked so by `llm models`:
+
+```bash
+llm models
+OpenAI Chat: gpt-4o (aliases: 4o)
+OpenAI Chat: chatgpt-4o-latest (aliases: chatgpt-4o)
+...
+OpenAI Chat: gpt-5-nano-2025-08-07
+OpenAI Completion: gpt-3.5-turbo-instruct (aliases: 3.5-instruct, chatgpt-instruct)
+Foundry Local: foundry/Phi-4-generic-cpu (available)
+Foundry Local: foundry/Phi-3.5-mini-instruct-generic-cpu (available)
+Foundry Local: foundry/deepseek-r1-distill-qwen-14b-qnn-npu (available)
+Foundry Local: foundry/deepseek-r1-distill-qwen-7b-qnn-npu (available)
+Foundry Local: foundry/Phi-3-mini-128k-instruct-generic-cpu (available)
+Foundry Local: foundry/Phi-3-mini-4k-instruct-generic-cpu (available)
+Foundry Local: foundry/mistralai-Mistral-7B-Instruct-v0-2-generic-cpu (available)
+Foundry Local: foundry/Phi-4-mini-reasoning-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-0.5b-instruct-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-1.5b-instruct-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-coder-0.5b-instruct-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-coder-7b-instruct-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-coder-1.5b-instruct-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-14b-instruct-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-7b-instruct-generic-cpu (available)
+Foundry Local: foundry/qwen2.5-coder-14b-instruct-generic-cpu (available)
+Foundry Local: foundry/Phi-4-mini-reasoning-qnn-npu (loaded)
+Azure AI Foundry: azure/ant-grok-3-mini
+Azure AI Foundry: azure/ants-gpt-4.1-mini
+Default: gpt-4o-mini
+```
+
+If you run `llm` against a model which is not already loaded, the plugin will start the download and load the model automatically:
+
+```bash
+llm -m foundry/Phi-4-generic-cpu "Give me 5 facts about cheese"
+```
 
 ## Example
 
