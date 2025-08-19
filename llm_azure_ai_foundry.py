@@ -31,12 +31,9 @@ def register_models(register):
             if model.task == "chat-completion":
                 register(
                     FoundryLocalModel(
-                        model_id=model.id,
-                        alias=model.alias,
-                        manager=mgr,
-                    status=status
+                        model_id=model.id, alias=model.alias, manager=mgr, status=status
+                    )
                 )
-            )
 
         catalog_models = mgr.list_catalog_models()
         # Group by alias
@@ -56,21 +53,29 @@ def register_models(register):
 
     endpoint = llm.get_key("azure.endpoint")
     if not endpoint:
-        raise NeedsKeyException("Configure the azure.endpoint to the URL of your project endpoint, e.g. https://<xxx>.services.ai.azure.com/api/projects/<project-name>")  # noqa: E501
+        raise NeedsKeyException(
+            "Configure the azure.endpoint to the URL of your project endpoint, e.g. https://<xxx>.services.ai.azure.com/api/projects/<project-name>"
+        )  # noqa: E501
 
     with DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential:
         with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
             for deployment in project_client.deployments.list():
-                if "chat_completion" in deployment["capabilities"] \
-                    and deployment["capabilities"]["chat_completion"]:
+                if (
+                    "chat_completion" in deployment["capabilities"]
+                    and deployment["capabilities"]["chat_completion"]
+                ):
                     register(
                         AzureAIFoundryModel(
                             deployment_name=deployment["name"],
-                            client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                            client=project_client.get_openai_client(
+                                api_version="2025-04-01-preview"
+                            ),
                         ),
                         AsyncAzureAIFoundryModel(
                             deployment_name=deployment["name"],
-                            client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                            client=project_client.get_openai_client(
+                                api_version="2025-04-01-preview"
+                            ),
                         ),
                     )
 
@@ -132,7 +137,9 @@ class FoundryModelStatus(StrEnum):
 class FoundryLocalModel(Chat):
     needs_key = None
 
-    def __init__(self, model_id: str, alias: str, manager: FoundryLocalManager, status: FoundryModelStatus):
+    def __init__(
+        self, model_id: str, alias: str, manager: FoundryLocalManager, status: FoundryModelStatus
+    ):
         self.model_id = "foundry/" + model_id
         self.foundry_id = model_id
         self.model_name = alias
@@ -147,17 +154,17 @@ class FoundryLocalModel(Chat):
         )
         self._client = openai.OpenAI(
             base_url=manager.endpoint,
-            api_key=manager.api_key  # API key is not required for local usage
+            api_key=manager.api_key,  # API key is not required for local usage
         )
         self.manager = manager
 
     def get_client(self, key, *, async_=False):
         return self._client
 
-    def __str__(self): # pyright: ignore[reportIncompatibleMethodOverride]
+    def __str__(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         return f"Foundry Local: {self.model_id} ({self.status})"
 
-    def execute(self, *args, **kwargs): # pyright: ignore[reportIncompatibleMethodOverride]
+    def execute(self, *args, **kwargs):  # pyright: ignore[reportIncompatibleMethodOverride]
         if self.status == FoundryModelStatus.Available:
             logging.warning("Model not cached, downloading from model registry")
             self.manager.download_model(self.foundry_id)
