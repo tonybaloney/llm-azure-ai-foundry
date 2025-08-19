@@ -1,17 +1,58 @@
+from enum import StrEnum
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 
 import logging
 
 import llm
+import openai
 from llm.errors import NeedsKeyException
 from llm.default_plugins.openai_models import AsyncChat, Chat
+
+from foundry_local import FoundryLocalManager
+from foundry_local.service import assert_foundry_installed
+from foundry_local.api import FoundryModelInfo
 
 logging.basicConfig(level=logging.WARNING)
 
 
 @llm.hookimpl
 def register_models(register):
+    try:
+        assert_foundry_installed()
+        FOUNDRY_LOCAL_INSTALLED = True
+    except RuntimeError:
+        FOUNDRY_LOCAL_INSTALLED = False
+
+    if FOUNDRY_LOCAL_INSTALLED:
+        mgr = FoundryLocalManager()
+
+        def register_model(model: FoundryModelInfo, status: FoundryModelStatus):
+            if model.task == "chat-completion":
+                register(
+                    FoundryLocalModel(
+                        model_id=model.id,
+                        alias=model.alias,
+                        manager=mgr,
+                    status=status
+                )
+            )
+
+        catalog_models = mgr.list_catalog_models()
+        # Group by alias
+        cached_models = mgr.list_cached_models()
+        loaded_models = mgr.list_loaded_models()
+
+        for model in catalog_models:
+            if model not in loaded_models and model not in cached_models:
+                register_model(model, FoundryModelStatus.Available)
+
+        for model in cached_models:
+            if model not in loaded_models:
+                register_model(model, FoundryModelStatus.Cached)
+
+        for model in loaded_models:
+            register_model(model, FoundryModelStatus.Loaded)
 
     endpoint = llm.get_key("azure.endpoint")
     if not endpoint:
@@ -80,3 +121,49 @@ class AsyncAzureAIFoundryModel(AsyncChat):
 
     def get_client(self, key, *, async_=False):
         return self._client
+
+
+class FoundryModelStatus(StrEnum):
+    Available = "available"
+    Cached = "cached"
+    Loaded = "loaded"
+
+
+class FoundryLocalModel(Chat):
+    needs_key = None
+
+    def __init__(self, model_id: str, alias: str, manager: FoundryLocalManager, status: FoundryModelStatus):
+        self.model_id = "foundry/" + model_id
+        self.foundry_id = model_id
+        self.model_name = alias
+        self.status = status
+        super().__init__(
+            model_id=self.model_id,
+            model_name=self.foundry_id,
+            vision=True,
+            reasoning=True,
+            supports_schema=True,
+            supports_tools=True,
+        )
+        self._client = openai.OpenAI(
+            base_url=manager.endpoint,
+            api_key=manager.api_key  # API key is not required for local usage
+        )
+        self.manager = manager
+
+    def get_client(self, key, *, async_=False):
+        return self._client
+
+    def __str__(self): # pyright: ignore[reportIncompatibleMethodOverride]
+        return f"Foundry Local: {self.model_id} ({self.status})"
+
+    def execute(self, *args, **kwargs): # pyright: ignore[reportIncompatibleMethodOverride]
+        if self.status == FoundryModelStatus.Available:
+            logging.warning("Model not cached, downloading from model registry")
+            self.manager.download_model(self.foundry_id)
+            self.status = FoundryModelStatus.Cached
+        if self.status == FoundryModelStatus.Cached:
+            logging.warning("Model not loaded, loading from cache")
+            self.manager.load_model(self.foundry_id)
+            self.status = FoundryModelStatus.Loaded
+        return super().execute(*args, **kwargs)
