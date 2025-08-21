@@ -75,11 +75,11 @@ def register_models(register):
     if not endpoint:
         return
 
-    cred_chain = ChainedTokenCredential(
+    credential_chain = ChainedTokenCredential(
         EnvironmentCredential(), AzureCliCredential(), InteractiveBrowserCredential()
     )
 
-    with cred_chain as credential:
+    with credential_chain as credential:
         with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
             for deployment in project_client.deployments.list():
                 if (
