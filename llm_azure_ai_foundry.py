@@ -1,16 +1,24 @@
 import logging
+import os
 from enum import StrEnum
 
 import llm
 from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential
+from azure.identity import (
+    AzureCliCredential,
+    ChainedTokenCredential,
+    EnvironmentCredential,
+    InteractiveBrowserCredential,
+)
 from foundry_local import FoundryLocalManager
 from foundry_local.api import FoundryModelInfo
 from foundry_local.service import assert_foundry_installed
 from llm.default_plugins.openai_models import AsyncChat, Chat
-from llm.errors import NeedsKeyException
 
-logging.basicConfig(level=logging.ERROR)
+if os.environ.get("LLM_AZURE_VERBOSE"):
+    logging.basicConfig(level=logging.INFO)
+else:
+    logging.basicConfig(level=logging.ERROR)
 
 # LLM will call the register_models hook twice for each invocation
 # Since we dynamically register models, cache the answer to avoid
@@ -63,13 +71,15 @@ def register_models(register):
         for model in loaded_models:
             register_model(model, FoundryModelStatus.Loaded)
 
-    endpoint = llm.get_key("azure.endpoint")
+    endpoint = llm.get_key("azure.endpoint", env="AZURE_ENDPOINT")
     if not endpoint:
-        raise NeedsKeyException(
-            "Configure the azure.endpoint to the URL of your project endpoint, e.g. https://<xxx>.services.ai.azure.com/api/projects/<project-name>"
-        )  # noqa: E501
+        return
 
-    with DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential:
+    cred_chain = ChainedTokenCredential(
+        EnvironmentCredential(), AzureCliCredential(), InteractiveBrowserCredential()
+    )
+
+    with cred_chain as credential:
         with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
             for deployment in project_client.deployments.list():
                 if (

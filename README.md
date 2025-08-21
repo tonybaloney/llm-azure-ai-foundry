@@ -29,8 +29,23 @@ Set this project endpoint as the `azure.endpoint` key:
 $ llm keys set --value https://<xxx>.services.ai.azure.com/api/projects/<project-name> azure.endpoint 
 ```
 
+Alternatively, set the `AZURE_ENDPOINT` environment variable to the credential.
+
 Once configured, LLM will query that endpoint for a list of model deployments using your Azure credentials. 
-Azure credentials will first attempt to use your Azure CLI credential (`az login`). If that is not set, it will open a browser with a signin request.
+
+Credentials are attempted in this order:
+
+1. Service principal with secret:
+
+    `AZURE_TENANT_ID`: ID of the service principal's tenant. Also called its 'directory' ID.
+    `AZURE_CLIENT_ID`: the service principal's client ID
+    `AZURE_CLIENT_SECRET`: one of the service principal's client secrets
+    `AZURE_AUTHORITY_HOST`: authority of a Microsoft Entra endpoint, for example "login.microsoftonline.com", the authority for Azure Public Cloud, which is the default when no value is given.
+
+2. Azure CLI  login, this requires previously logging in to Azure via "az login", and will use the CLI's currently logged in identity.
+
+3. Interactive Browser Login
+
 
 Once signed in, it will include your model deployments in the list under `llm models`:
 
