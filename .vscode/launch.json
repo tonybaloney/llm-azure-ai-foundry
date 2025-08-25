@@ -13,5 +13,14 @@
             "args": ["-m", "foundry/Phi-4-mini-reasoning-qnn-npu", "Hello World"],
             "justMyCode": false
         }
+
+        {
+            "name": "List Models",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "llm",
+            "args": ["-models"],
+            "justMyCode": false
+        }
     ]
 }

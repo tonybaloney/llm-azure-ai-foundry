@@ -1,9 +1,11 @@
 import logging
 import os
 from enum import StrEnum
+from typing import Generator, Iterable, Iterator, List, Optional, Union
 
 import llm
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import Deployment
 from azure.identity import (
     AzureCliCredential,
     ChainedTokenCredential,
@@ -14,6 +16,7 @@ from foundry_local import FoundryLocalManager
 from foundry_local.api import FoundryModelInfo
 from foundry_local.service import assert_foundry_installed
 from llm.default_plugins.openai_models import AsyncChat, Chat
+from llm.models import EmbeddingModel
 
 if os.environ.get("LLM_AZURE_VERBOSE"):
     logging.basicConfig(level=logging.INFO)
@@ -26,6 +29,7 @@ AZURE_MAX_ENDPOINTS = int(os.environ.get("AZURE_MAX_ENDPOINTS", 20))
 # Since we dynamically register models, cache the answer to avoid
 # this extra overhead.
 _cached_models = {}
+_cached_embedding_models = {}
 
 
 @llm.hookimpl
@@ -73,6 +77,82 @@ def register_models(register):
         for model in loaded_models:
             register_model(model, FoundryModelStatus.Loaded)
 
+    for suffix, project_client, deployment in get_deployments_from_config("chat_completion"):
+        cached_register(
+            deployment["name"],
+            AzureAIFoundryModel(
+                deployment_name=deployment["name"],
+                model_name=deployment["modelName"],
+                client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                suffix=suffix,
+            ),
+            AsyncAzureAIFoundryModel(
+                deployment_name=deployment["name"],
+                model_name=deployment["modelName"],
+                client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                suffix=suffix,
+            ),
+        )
+
+
+@llm.hookimpl
+def register_embedding_models(register):
+    def cached_register(alias, model):
+        _cached_embedding_models[alias] = model
+        register(model)
+
+    if _cached_embedding_models:
+        for _, model in _cached_embedding_models.items():
+            register(model)
+        return
+
+    for suffix, project_client, deployment in get_deployments_from_config("embeddings"):
+        if deployment["modelName"] == "text-embedding-3-small":
+            cached_register(
+                f"{deployment['name']}-512",
+                AzureAIFoundryEmbeddingModel(
+                    deployment_name=deployment["name"],
+                    model_name=deployment["modelName"],
+                    client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                    model_id=f"azure{suffix}/{deployment['name']}-512",
+                    dimensions=512,
+                ),
+            )
+        elif deployment["modelName"] == "text-embedding-3-large":
+            cached_register(
+                f"{deployment['name']}-256",
+                AzureAIFoundryEmbeddingModel(
+                    deployment_name=deployment["name"],
+                    model_name=deployment["modelName"],
+                    client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                    model_id=f"azure{suffix}/{deployment['name']}-256",
+                    dimensions=256,
+                ),
+            )
+            cached_register(
+                f"{deployment['name']}-1024",
+                AzureAIFoundryEmbeddingModel(
+                    deployment_name=deployment["name"],
+                    model_name=deployment["modelName"],
+                    client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                    model_id=f"azure{suffix}/{deployment['name']}-1024",
+                    dimensions=1024,
+                ),
+            )
+        cached_register(
+            deployment["name"],
+            AzureAIFoundryEmbeddingModel(
+                deployment_name=deployment["name"],
+                model_name=deployment["modelName"],
+                client=project_client.get_openai_client(api_version="2025-04-01-preview"),
+                model_id=f"azure{suffix}/" + deployment["name"],
+            ),
+        )
+
+
+def get_deployments_from_config(
+    required_capability: str,
+) -> Generator[tuple[str, AIProjectClient, Deployment], None, None]:
     base_endpoint = llm.get_key("azure.endpoint", env="AZURE_ENDPOINT")
     if not base_endpoint:
         return
@@ -98,28 +178,10 @@ def register_models(register):
             with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
                 for deployment in project_client.deployments.list():
                     if (
-                        "chat_completion" in deployment["capabilities"]
-                        and deployment["capabilities"]["chat_completion"]
+                        required_capability in deployment["capabilities"]
+                        and deployment["capabilities"][required_capability]
                     ):
-                        cached_register(
-                            deployment["name"],
-                            AzureAIFoundryModel(
-                                deployment_name=deployment["name"],
-                                model_name=deployment["model_name"],
-                                client=project_client.get_openai_client(
-                                    api_version="2025-04-01-preview"
-                                ),
-                                suffix=suffix,
-                            ),
-                            AsyncAzureAIFoundryModel(
-                                deployment_name=deployment["name"],
-                                model_name=deployment["model_name"],
-                                client=project_client.get_openai_client(
-                                    api_version="2025-04-01-preview"
-                                ),
-                                suffix=suffix,
-                            ),
-                        )
+                        yield suffix, project_client, deployment
 
 
 class AzureAIFoundryModel(Chat):
@@ -170,6 +232,37 @@ class AsyncAzureAIFoundryModel(AsyncChat):
 
     def get_client(self, key, *, async_=False):
         return self._client
+
+
+class AzureAIFoundryEmbeddingModel(EmbeddingModel):
+    needs_key = None
+
+    def __init__(
+        self,
+        deployment_name: str,
+        model_name: str,
+        client,
+        model_id: str,
+        dimensions: Optional[int] = None,
+    ):
+        self._client = client
+        self.model_name = deployment_name  # the azure deployment name
+        self.actual_model_name = model_name  # the name of the actual model (e.g. gpt-4o)
+        self.model_id = model_id
+        self.dimensions = dimensions
+
+    def embed_batch(self, items: Iterable[Union[str, bytes]]) -> Iterator[List[float]]:
+        kwargs = {
+            "input": items,
+            "model": self.model_name,
+        }
+        if self.dimensions:
+            kwargs["dimensions"] = self.dimensions
+        results = self._client.embeddings.create(**kwargs).data
+        return ([float(r) for r in result.embedding] for result in results)
+
+    def __str__(self):  # pyright: ignore[reportIncompatibleMethodOverride]
+        return f"Azure AI Foundry: {self.model_id} ({self.actual_model_name})"
 
 
 class FoundryModelStatus(StrEnum):

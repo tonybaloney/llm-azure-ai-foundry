@@ -63,6 +63,33 @@ Default: gpt-4o-mini
 
 Using any of those models, you can make requests to the Azure AI Foundry using llm.
 
+### Embedding Models
+
+This plugin supports embedding models deployed to Azure AI Foundry, to see the embedding models in your project:
+
+```bash
+$ llm embed-models
+OpenAIEmbeddingModel: text-embedding-ada-002 (aliases: ada, ada-002)
+OpenAIEmbeddingModel: text-embedding-3-small (aliases: 3-small)
+OpenAIEmbeddingModel: text-embedding-3-large (aliases: 3-large)
+OpenAIEmbeddingModel: text-embedding-3-small-512 (aliases: 3-small-512)
+OpenAIEmbeddingModel: text-embedding-3-large-256 (aliases: 3-large-256)
+OpenAIEmbeddingModel: text-embedding-3-large-1024 (aliases: 3-large-1024)
+Azure AI Foundry: azure/text-embedding-3-small-512 (text-embedding-3-small)
+Azure AI Foundry: azure/text-embedding-3-small (text-embedding-3-small)
+Azure AI Foundry: azure/text-embedding-ada-002 (text-embedding-ada-002)
+```
+
+Variants of the text-embedding-3-small and text-embedding-3-large models will be added automatically with the other dimensions available in the API.
+
+To embed a text input:
+
+```bash
+$ llm embed --model azure/text-embedding-3-small-512 -c "Your text input here"
+```
+
+For the full details, see the [llm documentation](https://llm.datasette.io/en/stable/embeddings/cli.html#llm-embed).
+
 ### Multiple Project Endpoints
 
 If you have multiple Azure AI Foundry project endpoints, you can configure them by setting additional environment variables or using the `llm keys set` command for each endpoint.
