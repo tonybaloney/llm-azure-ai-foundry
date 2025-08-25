@@ -20,6 +20,8 @@ if os.environ.get("LLM_AZURE_VERBOSE"):
 else:
     logging.basicConfig(level=logging.ERROR)
 
+AZURE_MAX_ENDPOINTS = int(os.environ.get("AZURE_MAX_ENDPOINTS", 20))
+
 # LLM will call the register_models hook twice for each invocation
 # Since we dynamically register models, cache the answer to avoid
 # this extra overhead.
@@ -78,7 +80,7 @@ def register_models(register):
     endpoints = [base_endpoint]
 
     # Extra endpoints
-    for i in range(20):
+    for i in range(AZURE_MAX_ENDPOINTS):
         extra_endpoint = llm.get_key(f"azure.endpoint.{i}", env=f"AZURE_ENDPOINT_{i}")
         if extra_endpoint:
             endpoints.append(extra_endpoint)
