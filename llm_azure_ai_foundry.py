@@ -77,20 +77,24 @@ def register_models(register):
     if not base_endpoint:
         return
 
-    endpoints = [base_endpoint]
+    endpoints = [("", base_endpoint)]
 
     # Extra endpoints
     for i in range(AZURE_MAX_ENDPOINTS):
-        extra_endpoint = llm.get_key(f"azure.endpoint.{i}", env=f"AZURE_ENDPOINT_{i}")
-        if extra_endpoint:
-            endpoints.append(extra_endpoint)
+        # all keys
+        all_keys = llm.load_keys()
+        if os.environ.get(f"AZURE_ENDPOINT_{i}"):
+            endpoints.append((f".{i}", os.environ[f"AZURE_ENDPOINT_{i}"]))
+        elif f"azure.endpoint.{i}" in all_keys and all_keys[f"azure.endpoint.{i}"].strip():
+            endpoints.append((f".{i}", all_keys[f"azure.endpoint.{i}"]))
 
     credential_chain = ChainedTokenCredential(
         EnvironmentCredential(), AzureCliCredential(), InteractiveBrowserCredential()
     )
 
     with credential_chain as credential:
-        for endpoint in endpoints:
+        for suffix, endpoint in endpoints:
+            logging.info(f"Checking Azure AI Foundry endpoint: {endpoint}")
             with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
                 for deployment in project_client.deployments.list():
                     if (
@@ -101,15 +105,19 @@ def register_models(register):
                             deployment["name"],
                             AzureAIFoundryModel(
                                 deployment_name=deployment["name"],
+                                model_name=deployment["model_name"],
                                 client=project_client.get_openai_client(
                                     api_version="2025-04-01-preview"
                                 ),
+                                suffix=suffix,
                             ),
                             AsyncAzureAIFoundryModel(
                                 deployment_name=deployment["name"],
+                                model_name=deployment["model_name"],
                                 client=project_client.get_openai_client(
                                     api_version="2025-04-01-preview"
                                 ),
+                                suffix=suffix,
                             ),
                         )
 
@@ -117,10 +125,11 @@ def register_models(register):
 class AzureAIFoundryModel(Chat):
     needs_key = None
 
-    def __init__(self, deployment_name: str, client):
+    def __init__(self, deployment_name: str, model_name: str, client, suffix: str = ""):
         self._client = client
-        self.model_name = deployment_name
-        self.model_id = "azure/" + deployment_name
+        self.model_name = deployment_name  # the azure deployment name
+        self.actual_model_name = model_name  # the name of the actual model (e.g. gpt-4o)
+        self.model_id = f"azure{suffix}/" + deployment_name
         super().__init__(
             model_id=self.model_id,
             model_name=self.model_name,
@@ -132,7 +141,7 @@ class AzureAIFoundryModel(Chat):
         )
 
     def __str__(self):  # pyright: ignore[reportIncompatibleMethodOverride]
-        return f"Azure AI Foundry: {self.model_id}"
+        return f"Azure AI Foundry: {self.model_id} ({self.actual_model_name})"
 
     def get_client(self, key, *, async_=False):
         return self._client
@@ -141,10 +150,11 @@ class AzureAIFoundryModel(Chat):
 class AsyncAzureAIFoundryModel(AsyncChat):
     needs_key = None
 
-    def __init__(self, deployment_name: str, client):
+    def __init__(self, deployment_name: str, model_name: str, client, suffix: str = ""):
         self._client = client
-        self.model_name = deployment_name
-        self.model_id = "azure/" + deployment_name
+        self.model_name = deployment_name  # the azure deployment name
+        self.actual_model_name = model_name  # the name of the actual model (e.g. gpt-4o)
+        self.model_id = f"azure{suffix}/" + deployment_name
         super().__init__(
             model_id=self.model_id,
             model_name=self.model_name,
@@ -156,7 +166,7 @@ class AsyncAzureAIFoundryModel(AsyncChat):
         )
 
     def __str__(self):  # pyright: ignore[reportIncompatibleMethodOverride]
-        return f"Azure AI Foundry: {self.model_id}"
+        return f"Azure AI Foundry: {self.model_id} ({self.actual_model_name})"
 
     def get_client(self, key, *, async_=False):
         return self._client

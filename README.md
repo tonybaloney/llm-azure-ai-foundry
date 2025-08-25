@@ -63,6 +63,33 @@ Default: gpt-4o-mini
 
 Using any of those models, you can make requests to the Azure AI Foundry using llm.
 
+### Multiple Project Endpoints
+
+If you have multiple Azure AI Foundry project endpoints, you can configure them by setting additional environment variables or using the `llm keys set` command for each endpoint.
+
+Endpoints 0 up to 19 are available, plus the main one configured in `azure.endpoint`.
+
+For example:
+
+```bash
+$ llm keys set --value https://<xxx>.services.ai.azure.com/api/projects/<project-name> azure.endpoint
+$ llm keys set --value https://<xxx>.services.ai.azure.com/api/projects/<project-name> azure.endpoint.0
+$ llm keys set --value https://<xxx>.services.ai.azure.com/api/projects/<project-name> azure.endpoint.1
+
+$ llm models # enumerates all 3 endpoints
+```
+
+#### Having more than 20 endpoints
+
+If 21 is not enough, you can set the `AZURE_MAX_ENDPOINTS` environment variable to a higher value. Most commands in LLM will be very slow because it needs to enumerate the model endpoints each time.
+
+After configuring you can go to any number, e.g. 
+
+```bash
+$ export AZURE_MAX_ENDPOINTS 50
+$ llm keys set --value https://<xxx>.services.ai.azure.com/api/projects/<project-name> azure.endpoint.49
+```
+
 ## Usage (Foundry Local)
 
 To use Foundry Local models with llm, first you need to install [Foundry Local](https://github.com/microsoft/Foundry-Local).
