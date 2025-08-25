@@ -71,36 +71,45 @@ def register_models(register):
         for model in loaded_models:
             register_model(model, FoundryModelStatus.Loaded)
 
-    endpoint = llm.get_key("azure.endpoint", env="AZURE_ENDPOINT")
-    if not endpoint:
+    base_endpoint = llm.get_key("azure.endpoint", env="AZURE_ENDPOINT")
+    if not base_endpoint:
         return
+
+    endpoints = [base_endpoint]
+
+    # Extra endpoints
+    for i in range(20):
+        extra_endpoint = llm.get_key(f"azure.endpoint.{i}", env=f"AZURE_ENDPOINT_{i}")
+        if extra_endpoint:
+            endpoints.append(extra_endpoint)
 
     credential_chain = ChainedTokenCredential(
         EnvironmentCredential(), AzureCliCredential(), InteractiveBrowserCredential()
     )
 
     with credential_chain as credential:
-        with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
-            for deployment in project_client.deployments.list():
-                if (
-                    "chat_completion" in deployment["capabilities"]
-                    and deployment["capabilities"]["chat_completion"]
-                ):
-                    cached_register(
-                        deployment["name"],
-                        AzureAIFoundryModel(
-                            deployment_name=deployment["name"],
-                            client=project_client.get_openai_client(
-                                api_version="2025-04-01-preview"
+        for endpoint in endpoints:
+            with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
+                for deployment in project_client.deployments.list():
+                    if (
+                        "chat_completion" in deployment["capabilities"]
+                        and deployment["capabilities"]["chat_completion"]
+                    ):
+                        cached_register(
+                            deployment["name"],
+                            AzureAIFoundryModel(
+                                deployment_name=deployment["name"],
+                                client=project_client.get_openai_client(
+                                    api_version="2025-04-01-preview"
+                                ),
                             ),
-                        ),
-                        AsyncAzureAIFoundryModel(
-                            deployment_name=deployment["name"],
-                            client=project_client.get_openai_client(
-                                api_version="2025-04-01-preview"
+                            AsyncAzureAIFoundryModel(
+                                deployment_name=deployment["name"],
+                                client=project_client.get_openai_client(
+                                    api_version="2025-04-01-preview"
+                                ),
                             ),
-                        ),
-                    )
+                        )
 
 
 class AzureAIFoundryModel(Chat):
