@@ -1,6 +1,6 @@
 [project]
 name = "llm-azure-ai-foundry"
-version = "0.3.0"
+version = "0.3.1"
 description = "LLM plugin to access model deployments on Azure AI Foundry and Foundry Local"
 readme = "README.md"
 authors = [{name = "Anthony Shaw"}]
