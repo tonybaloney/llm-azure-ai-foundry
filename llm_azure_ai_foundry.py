@@ -1,6 +1,6 @@
 import logging
 import os
-from enum import StrEnum
+from enum import Enum
 from typing import Generator, Iterable, Iterator, List, Optional, Union
 
 import llm
@@ -265,10 +265,13 @@ class AzureAIFoundryEmbeddingModel(EmbeddingModel):
         return f"Azure AI Foundry: {self.model_id} ({self.actual_model_name})"
 
 
-class FoundryModelStatus(StrEnum):
+class FoundryModelStatus(Enum):
     Available = "available"
     Cached = "cached"
     Loaded = "loaded"
+
+    def __str__(self):
+        return self.value
 
 
 class FoundryLocalModel(Chat):
